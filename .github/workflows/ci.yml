@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - .github/CODE_OF_CONDUCT.md
+      - .github/CODEOWNERS
+      - .github/dependabot.yml
+      - .github/FUNDING.yml
+      - LICENSE
+      - .gitignore
+  pull_request:
+    paths-ignore:
+      - .github/CODE_OF_CONDUCT.md
+      - .github/CODEOWNERS
+      - .github/dependabot.yml
+      - .github/FUNDING.yml
+      - LICENSE
+      - .gitignore
+  schedule:
+    - cron: "0 5 * * 1,3,6"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: --deny warnings
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Init toolchain
+        uses: dtolnay/rust-toolchain@v1
+        id: toolchain
+        with:
+          toolchain: stable
+          components: rustfmt,clippy
+      - name: Fmt
+        run: cargo fmt --check
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-lint-
+          restore-keys: |
+            v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-test
+            v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-
+            v2-cargo-${{runner.os}}
+      - name: Clippy
+        run: cargo clippy --workspace --tests
+      - name: Install cargo-rdme
+        continue-on-error: true
+        run: cargo install cargo-rdme --debug --version ^1
+      - name: Run cargo-rdme
+        run: cargo rdme --check
+
+  test:
+    name: Rust ${{matrix.toolchain}} on ${{matrix.os}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+#          - windows-latest
+#          - macos-latest
+          - ubuntu-latest
+        toolchain:
+          - stable
+          - 1.60.0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Init toolchain
+        uses: dtolnay/rust-toolchain@v1
+        id: toolchain
+        with:
+          toolchain: ${{matrix.toolchain}}
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-test-
+          restore-keys: |
+            v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-lint
+            v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-
+            v2-cargo-${{runner.os}}
+      - name: Build
+        run: cargo build --workspace --tests --locked
+      - name: Test
+        run: cargo test --workspace --locked
+#      - name: Test (examples)
+#        run: cargo test --examples --locked --all-features
