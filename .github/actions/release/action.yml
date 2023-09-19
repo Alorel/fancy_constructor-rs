@@ -15,37 +15,15 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Git add
-      shell: bash
-      run: git add Cargo.toml Cargo.lock
-    - name: Commit version bump
-      shell: bash
-      run: 'git commit -m "chore: Bump package version to ${{ inputs.version }}"'
-    - name: Git tag
-      shell: bash
-      run: git tag "${{ inputs.version }}"
-    - name: Get last commit sha
-      shell: bash
-      id: last-commit
-      run: echo "sha=$(git log -n 1 --pretty=format:%H)" >> $GITHUB_OUTPUT
-    - name: Push commit
-      shell: bash
-      run: git push
-    - name: Push tag
-      shell: bash
-      run: git push --tags
+    - uses: alorel-actions/cargo/release-git@v1
+      with:
+        version: ${{ inputs.version }}
+        changelog: ${{ inputs.changelog }}
+
     - name: Publish crate
       shell: bash
       run: cargo publish --locked --token ${{ inputs.crates-io-token }}
-    - name: Create release
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: false
-        prerelease: false
-        generateReleaseNotes: false
-        commit: ${{ steps.last-commit.outputs.sha }}
-        tag: ${{ inputs.version }}
-        body: ${{ inputs.changelog }}
+
     - name: Notify
       if: ${{ inputs.issues-closed }}
       uses: alorel-actions/semantic-release-lite/notify@v0

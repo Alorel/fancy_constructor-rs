@@ -17,30 +17,14 @@ runs:
     - name: Git identity
       uses: alorel-actions/git-ident@v1
     - name: Init toolchain
-      uses: dtolnay/rust-toolchain@v1
+      uses: alorel-actions/cargo/init@v1
       id: toolchain
       with:
-        toolchain: stable
-    - name: Cache
-      uses: actions/cache@v3
+        cache-prefix: release
+    - name: cargo-bump
+      uses: alorel-actions/cargo/bump@v1
       with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-release-
-        restore-keys: v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-test-
-    - name: Install cargo bump
-      shell: bash
-      run: cargo install cargo-bump --debug --version ^1.1
-    - name: Bump version
-      shell: bash
-      run: cargo bump ${{ inputs.release-type }}
-    - name: Refresh Cargo.lock
-      shell: bash
-      run: cargo build --workspace
+        release-type: ${{ inputs.release-type }}
     - name: Sync check
       id: sync-check
       uses: alorel-actions/semantic-release-lite/sync-check@v0
