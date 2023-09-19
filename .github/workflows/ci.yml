@@ -34,36 +34,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_TOKEN }}
       - name: Init toolchain
-        uses: dtolnay/rust-toolchain@v1
+        uses: alorel-actions/cargo/init@v1
         id: toolchain
         with:
-          toolchain: stable
           components: rustfmt,clippy
+          cache-prefix: lint
+          local: true
       - name: Fmt
         run: cargo fmt --check
-      - name: Cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-lint-
-          restore-keys: |
-            v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-
-            v2-cargo-${{runner.os}}
       - name: Clippy
         run: cargo clippy --workspace --tests
-      - name: Install cargo-rdme
-        continue-on-error: true
-        run: cargo install cargo-rdme --debug --version ^1
-      - name: Run cargo-rdme
-        run: cargo rdme --check
+      - name: cargo-rdme
+        uses: alorel-actions/cargo/rdme@v1
 
   test:
     name: Rust ${{matrix.toolchain}} on ${{matrix.os}}
@@ -82,23 +65,12 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN }}
       - name: Init toolchain
-        uses: dtolnay/rust-toolchain@v1
+        uses: alorel-actions/cargo/init@v1
         id: toolchain
         with:
           toolchain: ${{matrix.toolchain}}
-      - name: Cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-test-
-          restore-keys: |
-            v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-
-            v2-cargo-${{runner.os}}
+          cache-prefix: test
+          local: true
       - name: Build
         run: cargo build --workspace --tests --locked
       - name: Test
