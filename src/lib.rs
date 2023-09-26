@@ -99,6 +99,21 @@
 //!   }
 //! }
 //! ````
+//!
+//! ## Computed values
+//!
+//! ```
+//! # use fancy_constructor::new;
+//! #[derive(new)]
+//! struct Foo {
+//!   is_bar: bool,
+//!   #[new(val(if is_bar { 100 } else { 5 }))]
+//!   barness_level: u8,
+//! }
+//!
+//! assert_eq!(Foo::new(true).barness_level, 100);
+//! assert_eq!(Foo::new(false).barness_level, 5);
+//! ```
 
 #![deny(clippy::correctness, clippy::suspicious)]
 #![warn(clippy::complexity, clippy::perf, clippy::style, clippy::pedantic)]
