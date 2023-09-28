@@ -49,8 +49,44 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --tests
 
+      - name: Doc
+        run: cargo doc --workspace --no-deps && rm -rf target/doc
+
       - name: cargo-rdme
         uses: alorel-actions/cargo/rdme@v1
+
+  nightly-test:
+    name: Rust nightly
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Init toolchain
+        uses: alorel-actions/cargo/init@v1
+        with:
+          toolchain: nightly-2023-09-18
+          cache-prefix: test
+          local: true
+          components: llvm-tools-preview
+
+      - name: Examples & unit tests
+        uses: alorel-actions/cargo/llvm-cov@v1
+        with:
+          output: unit.lcov
+          args: --lcov --examples --tests --workspace
+
+      - name: Doc tests
+        uses: alorel-actions/cargo/llvm-cov@v1
+        with:
+          output: doc.lcov
+          args: --lcov --doctests --workspace
+
+      - name: Upload coverage
+        uses: coverallsapp/github-action@v2
+        continue-on-error: true
+        with:
+          files: unit.lcov doc.lcov
 
   test:
     name: Rust ${{matrix.toolchain}} on ${{matrix.os}}
@@ -88,6 +124,7 @@ jobs:
     needs:
       - lint
       - test
+      - nightly-test
     permissions:
       contents: write
     steps:
