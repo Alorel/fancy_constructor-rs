@@ -6,6 +6,7 @@ Derive a highly configurable constructor for your struct
 [![crates.io badge](https://img.shields.io/crates/v/fancy_constructor)](https://crates.io/crates/fancy_constructor)
 [![docs.rs badge](https://img.shields.io/docsrs/fancy_constructor?label=docs.rs)](https://docs.rs/fancy_constructor)
 [![dependencies badge](https://img.shields.io/librariesio/release/cargo/fancy_constructor)](https://libraries.io/cargo/fancy_constructor)
+[![Coverage Status](https://coveralls.io/repos/github/Alorel/fancy_constructor-rs/badge.png)](https://coveralls.io/github/Alorel/fancy_constructor-rs)
 
 # Examples
 
@@ -135,6 +136,33 @@ impl MyEnum {
   }
 }
 ````
+
+</details>
+
+<details><summary>Invalid inputs</summary>
+
+```rust
+#[derive(fancy_constructor::new)]
+enum Foo {
+  Bar, // no variants marked with `#[new]`
+}
+```
+
+```rust
+#[derive(fancy_constructor::new)]
+enum Foo {
+  #[new] Bar, // multiple variants marked with `#[new]`
+  #[new] Qux,
+}
+```
+
+```rust
+#[derive(fancy_constructor::new)]
+union Foo { // Unions not supported
+  bar: u8,
+  qux: u8,
+}
+```
 
 </details>
 
