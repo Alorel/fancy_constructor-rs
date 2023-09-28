@@ -6,7 +6,8 @@
 //! [![dependencies badge](https://img.shields.io/librariesio/release/cargo/fancy_constructor)](https://libraries.io/cargo/fancy_constructor)
 //!
 //! # Examples
-//! ## Basic
+//!
+//! <details><summary>Basic</summary>
 //!
 //! ```
 //! use fancy_constructor::new;
@@ -31,7 +32,8 @@
 //! }
 //! ````
 //!
-//! ## Options showcase
+//! </details>
+//! <details><summary>Options showcase</summary>
 //!
 //! ```
 //! # use fancy_constructor::new;
@@ -77,7 +79,8 @@
 //! }
 //! ````
 //!
-//! ## Private const fn
+//! </details>
+//! <details><summary>Private const fn</summary>
 //!
 //! ```
 //! # use fancy_constructor::new;
@@ -100,7 +103,8 @@
 //! }
 //! ````
 //!
-//! ## Computed values
+//! </details>
+//! <details><summary>Computed values</summary>
 //!
 //! ```
 //! # use fancy_constructor::new;
@@ -114,6 +118,34 @@
 //! assert_eq!(Foo::new(true).barness_level, 100);
 //! assert_eq!(Foo::new(false).barness_level, 5);
 //! ```
+//!
+//! </details>
+//! <details><summary>Enums</summary>
+//!
+//! ```
+//! # use fancy_constructor::new;
+//! #[derive(new, Eq, PartialEq, Debug)]
+//! enum MyEnum {
+//!   #[new]
+//!   Foo { #[new(into)] bar: u8 },
+//!   Qux,
+//! }
+//!
+//! assert_eq!(MyEnum::new(5), MyEnum::Foo { bar: 5 });
+//! ```
+//!
+//! Outputs:
+//!
+#![cfg_attr(doctest, doc = " ````no_test")]
+//! ```
+//! impl MyEnum {
+//!   pub fn new(bar: Into<u8>) -> Self {
+//!     Self::Foo { bar: bar.into() }
+//!   }
+//! }
+//! ````
+//!
+//! </details>
 
 #![deny(clippy::correctness, clippy::suspicious)]
 #![warn(clippy::complexity, clippy::perf, clippy::style, clippy::pedantic)]
@@ -162,10 +194,18 @@ enum Fields {
     Unnamed(Vec<Field>),
 }
 
+enum FieldsSource {
+    Struct(Fields),
+    Enum {
+        variant: proc_macro2::Ident,
+        fields: Fields,
+    },
+}
+
 struct FancyConstructor {
     struct_name: proc_macro2::Ident,
     generics: syn::Generics,
-    fields: Fields,
+    fields: FieldsSource,
     opts: options::ContainerOptions,
 }
 

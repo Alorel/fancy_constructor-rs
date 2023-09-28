@@ -5,7 +5,7 @@ use quote::{quote, ToTokens, TokenStreamExt};
 use syn::{Generics, Token};
 
 use crate::options::{ContainerOptions, FieldOptions};
-use crate::{FancyConstructor, Field, Fields};
+use crate::{FancyConstructor, Field, Fields, FieldsSource};
 
 impl FancyConstructor {
     #[inline]
@@ -21,14 +21,17 @@ impl FancyConstructor {
         tokens.append(Ident::create("impl"));
         append_generics(generics, struct_name, &mut tokens);
 
-        tokens.append(Group::new(Delimiter::Brace, make_struct_body(opts, fields)));
+        tokens.append(Group::new(
+            Delimiter::Brace,
+            make_container_body(opts, fields),
+        ));
 
         tokens
     }
 }
 
 #[inline]
-fn make_struct_body(opts: ContainerOptions, fields: Fields) -> TokenStream {
+fn make_container_body(opts: ContainerOptions, fields: FieldsSource) -> TokenStream {
     let mut tokens = if let Some(comment) = &opts.comment {
         quote!(#[doc = #comment])
     } else {
@@ -68,9 +71,20 @@ fn make_struct_body(opts: ContainerOptions, fields: Fields) -> TokenStream {
 }
 
 #[inline]
-fn make_fn_body(fields: Fields) -> TokenStream {
+fn make_fn_body(fields: FieldsSource) -> TokenStream {
     let mut tokens = quote!(Self);
-    let (named, fields) = match fields.into_vec() {
+
+    let fields = match fields {
+        FieldsSource::Struct(fields) => fields.into_vec(),
+        FieldsSource::Enum { variant, fields } => {
+            tokens.append(Punct::new_joint(':'));
+            tokens.append(Punct::new_joint(':'));
+            tokens.append(variant);
+            fields.into_vec()
+        }
+    };
+
+    let (named, fields) = match fields {
         None => return tokens,
         Some(v) => v,
     };
@@ -126,9 +140,9 @@ fn append_method_call(name: &str, tokens: &mut TokenStream) {
 }
 
 #[inline]
-fn make_args(fields: &Fields) -> TokenStream {
+fn make_args(fields: &FieldsSource) -> TokenStream {
     let mut tokens = TokenStream::new();
-    let (_, fields) = match fields.to_vec() {
+    let (_, fields) = match fields.fields().to_vec() {
         Some(v) => v,
         None => return tokens,
     };
@@ -180,6 +194,14 @@ impl FieldOptions {
     #[inline]
     fn should_skip_args(&self) -> bool {
         self.default || self.value.is_some()
+    }
+}
+
+impl FieldsSource {
+    fn fields(&self) -> &Fields {
+        match *self {
+            FieldsSource::Struct(ref fields) | FieldsSource::Enum { ref fields, .. } => fields,
+        }
     }
 }
 
