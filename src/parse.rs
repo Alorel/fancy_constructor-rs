@@ -1,13 +1,14 @@
-use crate::options::{ContainerOptions, FieldOptions};
-use crate::{FancyConstructor, Field, Fields, ATTR_NAME};
 use macroific::attr_parse::__private::try_collect;
-use macroific::extract_fields::Rejection;
 use macroific::prelude::*;
 use proc_macro2::{Ident, Span};
 use quote::format_ident;
 use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{Attribute, Data, DeriveInput, Error, Fields as SFields, Type};
+use syn::{Attribute, Data, DeriveInput, Error, Fields as SFields, Type, Variant};
+
+use crate::options::{ContainerOptions, FieldOptions};
+use crate::{FancyConstructor, Field, Fields, FieldsSource, ATTR_NAME};
 
 impl Parse for FancyConstructor {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -20,10 +21,19 @@ impl Parse for FancyConstructor {
         } = input.parse()?;
 
         Ok(Self {
-            fields: match get_fields(data)? {
-                SFields::Unit => Fields::Unit,
-                SFields::Named(f) => Fields::Named(collect_fields(fmt_named(f.named))?),
-                SFields::Unnamed(f) => Fields::Unnamed(collect_fields(fmt_unnamed(f.unnamed))?),
+            fields: match data {
+                Data::Struct(s) => FieldsSource::Struct(s.fields.try_into()?),
+                Data::Enum(e) => {
+                    let variant = find_variant(&e.enum_token, e.variants)?;
+
+                    FieldsSource::Enum {
+                        fields: variant.fields.try_into()?,
+                        variant: variant.ident,
+                    }
+                }
+                Data::Union(u) => {
+                    return Err(Error::new_spanned(u.union_token, "Unions not supported"));
+                }
             },
             opts: if attrs.is_empty() {
                 ContainerOptions::default()
@@ -86,13 +96,42 @@ fn fmt_unnamed(fields: impl IntoIterator<Item = syn::Field>) -> impl Iterator<It
         .map(move |(i, syn::Field { attrs, ty, .. })| (attrs, Err(format_ident!("f{}", i + 1)), ty))
 }
 
-#[inline]
-fn get_fields(data: Data) -> syn::Result<SFields> {
-    let span = match data.extract_struct() {
-        Ok(data) => return Ok(data.fields),
-        Err(Rejection::A(a)) => a.enum_token.span,
-        Err(Rejection::B(b)) => b.union_token.span,
-    };
+fn find_variant<P>(span: &impl Spanned, variants: Punctuated<Variant, P>) -> syn::Result<Variant> {
+    let mut out = None;
+    for variant in variants {
+        if variant
+            .attrs
+            .iter()
+            .any(move |a| a.path().is_ident(ATTR_NAME))
+        {
+            if out.is_some() {
+                return Err(Error::new_spanned(
+                    variant.ident,
+                    "Multiple variants marked with `#[new]`",
+                ));
+            }
+            out = Some(variant);
+        }
+    }
 
-    Err(Error::new(span, "Expected a struct"))
+    if let Some(out) = out {
+        Ok(out)
+    } else {
+        Err(Error::new(
+            span.span(),
+            "Expected a variant marked with `#[new]`",
+        ))
+    }
+}
+
+impl TryFrom<SFields> for Fields {
+    type Error = Error;
+
+    fn try_from(fields: SFields) -> Result<Self, Self::Error> {
+        Ok(match fields {
+            SFields::Unit => Fields::Unit,
+            SFields::Named(f) => Fields::Named(collect_fields(fmt_named(f.named))?),
+            SFields::Unnamed(f) => Fields::Unnamed(collect_fields(fmt_unnamed(f.unnamed))?),
+        })
+    }
 }

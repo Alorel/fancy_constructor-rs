@@ -8,7 +8,8 @@ Derive a highly configurable constructor for your struct
 [![dependencies badge](https://img.shields.io/librariesio/release/cargo/fancy_constructor)](https://libraries.io/cargo/fancy_constructor)
 
 # Examples
-## Basic
+
+<details><summary>Basic</summary>
 
 ```rust
 use fancy_constructor::new;
@@ -32,7 +33,8 @@ impl MyStruct {
 }
 ````
 
-## Options showcase
+</details>
+<details><summary>Options showcase</summary>
 
 ```rust
 #[derive(new, PartialEq, Eq, Debug)]
@@ -73,7 +75,8 @@ impl<T> MyStruct<T> {
 }
 ````
 
-## Private const fn
+</details>
+<details><summary>Private const fn</summary>
 
 ```rust
 #[derive(new, PartialEq, Eq, Debug)]
@@ -94,7 +97,8 @@ impl Foo {
 }
 ````
 
-## Computed values
+</details>
+<details><summary>Computed values</summary>
 
 ```rust
 #[derive(new)]
@@ -107,5 +111,31 @@ struct Foo {
 assert_eq!(Foo::new(true).barness_level, 100);
 assert_eq!(Foo::new(false).barness_level, 5);
 ```
+
+</details>
+<details><summary>Enums</summary>
+
+```rust
+#[derive(new, Eq, PartialEq, Debug)]
+enum MyEnum {
+  #[new]
+  Foo { #[new(into)] bar: u8 },
+  Qux,
+}
+
+assert_eq!(MyEnum::new(5), MyEnum::Foo { bar: 5 });
+```
+
+Outputs:
+
+```rust
+impl MyEnum {
+  pub fn new(bar: Into<u8>) -> Self {
+    Self::Foo { bar: bar.into() }
+  }
+}
+````
+
+</details>
 
 <!-- cargo-rdme end -->
