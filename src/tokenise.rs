@@ -1,4 +1,4 @@
-use macroific::elements::{ModulePrefix, SimpleAttr};
+use macroific::elements::ModulePrefix;
 use macroific::prelude::*;
 use proc_macro2::{Delimiter, Group, Ident, Punct, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
@@ -17,8 +17,11 @@ impl FancyConstructor {
             opts,
         } = self;
 
-        let mut tokens = SimpleAttr::AUTO_DERIVED.into_token_stream();
-        tokens.append(Ident::create("impl"));
+        let mut tokens = quote! {
+            #[automatically_derived]
+            #[allow(clippy::ptr_arg)]
+            impl
+        };
         append_generics(generics, struct_name, &mut tokens);
 
         tokens.append(Group::new(
