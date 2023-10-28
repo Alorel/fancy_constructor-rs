@@ -1,6 +1,6 @@
 [package]
 name = "fancy_constructor"
-version = "1.2.0"
+version = "1.2.1"
 authors = ["Art <amolc@pm.me>"]
 description = "Derive a highly configurable constructor for your struct"
 keywords = ["derive", "new", "constructor", "macro", "configurable"]
