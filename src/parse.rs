@@ -53,7 +53,7 @@ where
 {
     it.into_iter()
         .map(Spanned::span)
-        .reduce(move |a, b| a.join(b).unwrap())
+        .reduce(move |a, b| if let Some(span) = a.join(b) { span } else { a })
         .unwrap_or_else(Span::call_site)
 }
 
@@ -84,7 +84,13 @@ fn fmt_named(fields: impl IntoIterator<Item = syn::Field>) -> impl Iterator<Item
     fields.into_iter().map(
         move |syn::Field {
                   attrs, ident, ty, ..
-              }| { (attrs, Ok(ident.unwrap()), ty) },
+              }| {
+            (
+                attrs,
+                Ok(ident.expect("Failed to get ident off a named field")),
+                ty,
+            )
+        },
     )
 }
 
