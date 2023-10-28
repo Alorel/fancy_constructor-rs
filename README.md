@@ -114,6 +114,26 @@ assert_eq!(Foo::new(false).barness_level, 5);
 ```
 
 </details>
+
+<details><summary>Custom constructor args</summary>
+
+```rust
+#[derive(new)]
+#[new(args(input_string: &str))]
+struct Foo {
+  #[new(val(input_string.to_lowercase()))]
+  pub lowercase: String,
+
+  #[new(val(input_string.to_uppercase()))]
+  pub uppercase: String,
+}
+
+let foo = Foo::new("Foo");
+assert_eq!(foo.lowercase.as_str(), "foo");
+assert_eq!(foo.uppercase.as_str(), "FOO");
+```
+
+</details>
 <details><summary>Enums</summary>
 
 ```rust

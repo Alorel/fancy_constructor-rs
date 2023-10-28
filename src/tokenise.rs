@@ -2,9 +2,11 @@ use macroific::elements::ModulePrefix;
 use macroific::prelude::*;
 use proc_macro2::{Delimiter, Group, Ident, Punct, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
+use syn::punctuated::Punctuated;
 use syn::{Generics, Token};
 
 use crate::options::{ContainerOptions, FieldOptions};
+use crate::types::MiniField;
 use crate::{FancyConstructor, Field, Fields, FieldsSource};
 
 impl FancyConstructor {
@@ -35,37 +37,46 @@ impl FancyConstructor {
 
 #[inline]
 fn make_container_body(opts: ContainerOptions, fields: FieldsSource) -> TokenStream {
-    let mut tokens = if let Some(comment) = &opts.comment {
+    let ContainerOptions {
+        const_fn,
+        vis,
+        name,
+        comment,
+        bounds,
+        args,
+    } = opts;
+
+    let mut tokens = if let Some(comment) = comment {
         quote!(#[doc = #comment])
     } else {
         quote!(#[doc = "Constructs a new instance of the struct."])
     };
 
-    if let Some(vis) = &opts.vis {
+    if let Some(vis) = vis {
         vis.to_tokens(&mut tokens);
     } else {
         tokens.append(Ident::create("pub"));
     }
 
-    if opts.const_fn {
+    if const_fn {
         tokens.append(Ident::create("const"));
     }
 
     tokens.append(Ident::create("fn"));
-    tokens.append(if let Some(name) = opts.name {
+    tokens.append(if let Some(name) = name {
         name
     } else {
         Ident::create("new")
     });
 
-    tokens.append(Group::new(Delimiter::Parenthesis, make_args(&fields)));
+    tokens.append(Group::new(Delimiter::Parenthesis, make_args(&fields, args)));
 
     <Token![->]>::default().to_tokens(&mut tokens);
     tokens.append(Ident::create("Self"));
 
-    if !opts.bounds.is_empty() {
+    if !bounds.is_empty() {
         tokens.append(Ident::create("where"));
-        tokens.append_separated(opts.bounds, <Token![,]>::default());
+        tokens.append_separated(bounds, <Token![,]>::default());
     }
 
     tokens.append(Group::new(Delimiter::Brace, make_fn_body(fields)));
@@ -143,14 +154,16 @@ fn append_method_call(name: &str, tokens: &mut TokenStream) {
 }
 
 #[inline]
-fn make_args(fields: &FieldsSource) -> TokenStream {
+fn make_args(fields: &FieldsSource, args: Punctuated<MiniField, impl ToTokens>) -> TokenStream {
     let mut tokens = TokenStream::new();
     let (_, fields) = match fields.fields().to_vec() {
         Some(v) => v,
         None => return tokens,
     };
 
-    let iter = fields.iter().filter_map(move |Field { name, opts, ty }| {
+    let iter_args = args.into_iter().map(MiniField::into_token_stream);
+
+    let iter_fields = fields.iter().filter_map(move |Field { name, opts, ty }| {
         if opts.should_skip_args() {
             return None;
         }
@@ -174,7 +187,7 @@ fn make_args(fields: &FieldsSource) -> TokenStream {
         Some(tokens)
     });
 
-    tokens.append_separated(iter, <Token![,]>::default());
+    tokens.append_separated(iter_args.chain(iter_fields), <Token![,]>::default());
 
     tokens
 }
