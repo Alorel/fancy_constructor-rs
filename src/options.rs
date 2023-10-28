@@ -1,3 +1,4 @@
+use crate::types::MiniField;
 use macroific::prelude::*;
 use proc_macro2::Ident;
 use syn::punctuated::Punctuated;
@@ -10,6 +11,7 @@ pub(crate) struct ContainerOptions {
     pub name: Option<Ident>,
     pub comment: Option<LitStr>,
     pub bounds: Punctuated<TypeParam, Token![,]>,
+    pub args: Punctuated<MiniField, Token![,]>,
 }
 
 #[derive(AttributeOptions)]

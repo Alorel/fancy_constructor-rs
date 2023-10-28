@@ -121,6 +121,27 @@
 //! ```
 //!
 //! </details>
+//!
+//! <details><summary>Custom constructor args</summary>
+//!
+//! ```
+//! # use fancy_constructor::new;
+//! #[derive(new)]
+//! #[new(args(input_string: &str))]
+//! struct Foo {
+//!   #[new(val(input_string.to_lowercase()))]
+//!   pub lowercase: String,
+//!
+//!   #[new(val(input_string.to_uppercase()))]
+//!   pub uppercase: String,
+//! }
+//!
+//! let foo = Foo::new("Foo");
+//! assert_eq!(foo.lowercase.as_str(), "foo");
+//! assert_eq!(foo.uppercase.as_str(), "FOO");
+//! ```
+//!
+//! </details>
 //! <details><summary>Enums</summary>
 //!
 //! ```
@@ -183,6 +204,7 @@
 mod options;
 mod parse;
 mod tokenise;
+mod types;
 
 extern crate proc_macro;
 
@@ -199,6 +221,7 @@ const ATTR_NAME: &str = "new";
 /// | `new(name(ident))` | `new` | Constructor fn name |
 /// | `new(comment(literal))` | | A doc comment to add to the constructor |
 /// | `new(bounds(T: Whatever))` | | Generic type bounds for the implementation |
+/// | `new(args(foo: u8, bar: String))` | | Additional arguments to add to the **beginning** of the args list |
 ///
 /// # Field options
 ///
