@@ -21,7 +21,7 @@ impl FancyConstructor {
 
         let mut tokens = quote! {
             #[automatically_derived]
-            #[allow(clippy::ptr_arg)]
+            #[allow(clippy::style, clippy::pedantic)]
             impl
         };
         append_generics(generics, struct_name, &mut tokens);
