@@ -142,6 +142,26 @@
 //! ```
 //!
 //! </details>
+//! <details><summary>Renaming constructor args</summary>
+//!
+//! ```
+//! # use fancy_constructor::new;
+//! #[derive(new)]
+//! struct MyNewtype(#[new(name(my_value))] u8);
+//! ```
+//!
+//! Outputs:
+//!
+#![cfg_attr(doctest, doc = " ````no_test")]
+//! ```
+//! impl MyNewtype {
+//!   pub fn new(my_value: u8) -> Self {
+//!     Self(my_value)
+//!   }
+//! }
+//! ````
+//!
+//! </details>
 //! <details><summary>Enums</summary>
 //!
 //! ```
@@ -230,6 +250,7 @@ const ATTR_NAME: &str = "new";
 /// | `new(default)` | Omit the field from the constructor and use [`Default::default`] |
 /// | `new(clone)` | Make the argument pass-by-reference and clone it |
 /// | `new(into)` | Make the argument [`Into<T>`](Into) |
+/// | `new(name(ident))` | Rename the function argument - useful for newtype structs |
 /// | `new(val(expr))` | Initialise the value with the following expression instead of a construcor argument |
 ///
 #[proc_macro_derive(new, attributes(new))]

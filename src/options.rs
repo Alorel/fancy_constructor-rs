@@ -19,6 +19,7 @@ pub(crate) struct FieldOptions {
     pub default: bool,
     pub clone: bool,
     pub into: bool,
+    pub name: Option<Ident>,
 
     #[attr_opts(rename = "val")]
     pub value: Option<Expr>,
