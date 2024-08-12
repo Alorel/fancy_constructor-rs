@@ -21,7 +21,7 @@ impl FancyConstructor {
 
         let mut tokens = quote! {
             #[automatically_derived]
-            #[allow(clippy::style, clippy::pedantic)]
+            #[allow(clippy::all)]
             impl
         };
         append_generics(generics, struct_name, &mut tokens);
@@ -110,27 +110,27 @@ fn make_fn_body(fields: FieldsSource) -> TokenStream {
     };
 
     tokens.append(Group::new(delim, {
-        let iter = fields.into_iter().map(move |Field { name, opts, ty: _ }| {
+        let iter = fields.into_iter().map(move |field| {
             let mut tokens = TokenStream::new();
             if named {
-                name.to_tokens(&mut tokens);
+                field.name.to_tokens(&mut tokens);
                 tokens.append(Punct::new_alone(':'));
             }
 
-            if opts.default {
+            if field.opts.default {
                 ModulePrefix::new(&["core", "default", "Default", "default"])
                     .to_tokens(&mut tokens);
                 tokens.append(Group::new(Delimiter::Parenthesis, TokenStream::new()));
-            } else if let Some(ref value) = opts.value {
+            } else if let Some(ref value) = field.opts.value {
                 value.to_tokens(&mut tokens);
             } else {
-                tokens.append(name);
+                field.resolve_ident().to_tokens(&mut tokens);
 
-                if opts.clone {
+                if field.opts.clone {
                     append_method_call("clone", &mut tokens);
                 }
 
-                if opts.into {
+                if field.opts.into {
                     append_method_call("into", &mut tokens);
                 }
             }
@@ -163,25 +163,25 @@ fn make_args(fields: &FieldsSource, args: Punctuated<MiniField, impl ToTokens>) 
 
     let iter_args = args.into_iter().map(MiniField::into_token_stream);
 
-    let iter_fields = fields.iter().filter_map(move |Field { name, opts, ty }| {
-        if opts.should_skip_args() {
+    let iter_fields = fields.iter().filter_map(move |field| {
+        if field.opts.should_skip_args() {
             return None;
         }
 
-        let mut tokens = name.to_token_stream();
+        let mut tokens = field.resolve_ident().to_token_stream();
         tokens.append(Punct::new_alone(':'));
-        if opts.uses_reference() {
+        if field.opts.uses_reference() {
             tokens.append(Punct::new_joint('&'));
         }
 
-        if opts.into {
+        if field.opts.into {
             tokens.append(Ident::create("impl"));
             ModulePrefix::new(&["core", "convert", "Into"]).to_tokens(&mut tokens);
             tokens.append(Punct::new_joint('<'));
-            ty.to_tokens(&mut tokens);
+            field.ty.to_tokens(&mut tokens);
             tokens.append(Punct::new_alone('>'));
         } else {
-            ty.to_tokens(&mut tokens);
+            field.ty.to_tokens(&mut tokens);
         }
 
         Some(tokens)
@@ -235,6 +235,16 @@ impl Fields {
             Fields::Unit => None,
             Fields::Named(fields) => Some((true, fields)),
             Fields::Unnamed(fields) => Some((false, fields)),
+        }
+    }
+}
+
+impl Field {
+    pub fn resolve_ident(&self) -> &Ident {
+        if let Some(ref name) = self.opts.name {
+            name
+        } else {
+            &self.name
         }
     }
 }

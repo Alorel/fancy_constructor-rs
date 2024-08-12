@@ -134,6 +134,24 @@ assert_eq!(foo.uppercase.as_str(), "FOO");
 ```
 
 </details>
+<details><summary>Renaming constructor args</summary>
+
+```rust
+#[derive(new)]
+struct MyNewtype(#[new(name(my_value))] u8);
+```
+
+Outputs:
+
+```rust
+impl MyNewtype {
+  pub fn new(my_value: u8) -> Self {
+    Self(my_value)
+  }
+}
+````
+
+</details>
 <details><summary>Enums</summary>
 
 ```rust
