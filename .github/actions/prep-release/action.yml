@@ -4,9 +4,6 @@ inputs:
   release-type:
     description: Release type
     required: true
-  version:
-    description: Next version
-    required: true
 outputs:
   in-sync:
     description: Sync check

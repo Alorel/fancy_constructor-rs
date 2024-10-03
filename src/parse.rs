@@ -1,4 +1,3 @@
-use macroific::attr_parse::__private::try_collect;
 use macroific::prelude::*;
 use proc_macro2::{Ident, Span};
 use quote::format_ident;
@@ -61,20 +60,20 @@ fn collect_fields<F>(src_iter: impl Iterator<Item = FmtTuple>) -> syn::Result<F>
 where
     F: FromIterator<Field>,
 {
-    let iter = src_iter.map(move |(attrs, ident, ty)| {
-        Ok(Field {
-            name: match ident {
-                Ok(ident) | Err(ident) => ident,
-            },
-            opts: {
-                let span = create_span(&attrs);
-                FieldOptions::from_iter_named(ATTR_NAME, span, attrs)
-            }?,
-            ty,
+    src_iter
+        .map(move |(attrs, ident, ty)| {
+            Ok(Field {
+                name: match ident {
+                    Ok(ident) | Err(ident) => ident,
+                },
+                opts: {
+                    let span = create_span(&attrs);
+                    FieldOptions::from_iter_named(ATTR_NAME, span, attrs)
+                }?,
+                ty,
+            })
         })
-    });
-
-    try_collect(iter)
+        .collect()
 }
 
 type FmtTuple = (Vec<Attribute>, Result<Ident, Ident>, Type);
