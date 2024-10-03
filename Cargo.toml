@@ -5,7 +5,7 @@ authors = ["Art <amolc@pm.me>"]
 description = "Derive a highly configurable constructor for your struct"
 keywords = ["derive", "new", "constructor", "macro", "configurable"]
 edition = "2021"
-rust-version = "1.60.0"
+rust-version = "1.71.0"
 license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/Alorel/fancy_constructor-rs.git"
@@ -15,11 +15,8 @@ include = ["src/", "Cargo.toml"]
 [lib]
 proc-macro = true
 
-[features]
-nightly = ["macroific/nightly"]
-
 [dependencies]
-macroific = {version = "1.2.2", features = ["attr_parse", "full"]}
+macroific = {version = "2", features = ["attr_parse", "full"]}
 quote = "1"
 proc-macro2 = "1"
 syn = "2"

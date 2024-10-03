@@ -1,9 +1,9 @@
-use macroific::elements::ModulePrefix;
+use macroific::elements::GenericImpl;
 use macroific::prelude::*;
 use proc_macro2::{Delimiter, Group, Ident, Punct, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::punctuated::Punctuated;
-use syn::{Generics, Token};
+use syn::Token;
 
 use crate::options::{ContainerOptions, FieldOptions};
 use crate::types::MiniField;
@@ -19,19 +19,15 @@ impl FancyConstructor {
             opts,
         } = self;
 
-        let mut tokens = quote! {
+        let header = GenericImpl::new(generics).with_target(struct_name);
+        let body = make_container_body(opts, fields);
+        quote! {
             #[automatically_derived]
             #[allow(clippy::all)]
-            impl
-        };
-        append_generics(generics, struct_name, &mut tokens);
-
-        tokens.append(Group::new(
-            Delimiter::Brace,
-            make_container_body(opts, fields),
-        ));
-
-        tokens
+            #header {
+                #body
+            }
+        }
     }
 }
 
@@ -118,20 +114,18 @@ fn make_fn_body(fields: FieldsSource) -> TokenStream {
             }
 
             if field.opts.default {
-                ModulePrefix::new(&["core", "default", "Default", "default"])
-                    .to_tokens(&mut tokens);
-                tokens.append(Group::new(Delimiter::Parenthesis, TokenStream::new()));
+                tokens.extend(quote!(::core::default::Default::default()));
             } else if let Some(ref value) = field.opts.value {
                 value.to_tokens(&mut tokens);
             } else {
                 field.resolve_ident().to_tokens(&mut tokens);
 
                 if field.opts.clone {
-                    append_method_call("clone", &mut tokens);
+                    tokens.extend(quote!(.clone()));
                 }
 
                 if field.opts.into {
-                    append_method_call("into", &mut tokens);
+                    tokens.extend(quote!(.into()));
                 }
             }
 
@@ -147,18 +141,10 @@ fn make_fn_body(fields: FieldsSource) -> TokenStream {
     tokens
 }
 
-fn append_method_call(name: &str, tokens: &mut TokenStream) {
-    tokens.append(Punct::new_joint('.'));
-    tokens.append(Ident::create(name));
-    tokens.append(Group::new(Delimiter::Parenthesis, TokenStream::new()));
-}
-
-#[inline]
 fn make_args(fields: &FieldsSource, args: Punctuated<MiniField, impl ToTokens>) -> TokenStream {
     let mut tokens = TokenStream::new();
-    let (_, fields) = match fields.fields().to_vec() {
-        Some(v) => v,
-        None => return tokens,
+    let Some((_, fields)) = fields.fields().to_vec() else {
+        return tokens;
     };
 
     let iter_args = args.into_iter().map(MiniField::into_token_stream);
@@ -170,16 +156,14 @@ fn make_args(fields: &FieldsSource, args: Punctuated<MiniField, impl ToTokens>) 
 
         let mut tokens = field.resolve_ident().to_token_stream();
         tokens.append(Punct::new_alone(':'));
+
         if field.opts.uses_reference() {
             tokens.append(Punct::new_joint('&'));
         }
 
         if field.opts.into {
-            tokens.append(Ident::create("impl"));
-            ModulePrefix::new(&["core", "convert", "Into"]).to_tokens(&mut tokens);
-            tokens.append(Punct::new_joint('<'));
-            field.ty.to_tokens(&mut tokens);
-            tokens.append(Punct::new_alone('>'));
+            let ty = &field.ty;
+            tokens.extend(quote!(impl ::core::convert::Into<#ty>));
         } else {
             field.ty.to_tokens(&mut tokens);
         }
@@ -190,15 +174,6 @@ fn make_args(fields: &FieldsSource, args: Punctuated<MiniField, impl ToTokens>) 
     tokens.append_separated(iter_args.chain(iter_fields), <Token![,]>::default());
 
     tokens
-}
-
-#[inline]
-fn append_generics(generics: Generics, struct_name: Ident, tokens: &mut TokenStream) {
-    let (g1, g2, g3) = generics.split_for_impl();
-    g1.to_tokens(tokens);
-    tokens.append(struct_name);
-    g2.to_tokens(tokens);
-    g3.to_tokens(tokens);
 }
 
 impl FieldOptions {

@@ -1,8 +1,7 @@
 //! Derive a highly configurable constructor for your struct
 //!
-//! [![MASTER CI status](https://github.com/Alorel/fancy_constructor-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/Alorel/fancy_constructor-rs/actions/workflows/ci.yml?query=branch%3Amaster)
+//! [![MASTER CI status](https://github.com/Alorel/fancy_constructor-rs/actions/workflows/test.yml/badge.svg)](https://github.com/Alorel/fancy_constructor-rs/actions/workflows/test.yml?query=branch%3Amaster)
 //! [![crates.io badge](https://img.shields.io/crates/v/fancy_constructor)](https://crates.io/crates/fancy_constructor)
-//! [![docs.rs badge](https://img.shields.io/docsrs/fancy_constructor?label=docs.rs)](https://docs.rs/fancy_constructor)
 //! [![dependencies badge](https://img.shields.io/librariesio/release/cargo/fancy_constructor)](https://libraries.io/cargo/fancy_constructor)
 //! [![Coverage Status](https://coveralls.io/repos/github/Alorel/fancy_constructor-rs/badge.png)](https://coveralls.io/github/Alorel/fancy_constructor-rs)
 //!
@@ -251,7 +250,7 @@ const ATTR_NAME: &str = "new";
 /// | `new(clone)` | Make the argument pass-by-reference and clone it |
 /// | `new(into)` | Make the argument [`Into<T>`](Into) |
 /// | `new(name(ident))` | Rename the function argument - useful for newtype structs |
-/// | `new(val(expr))` | Initialise the value with the following expression instead of a construcor argument |
+/// | `new(val(expr))` | Initialise the value with the following expression instead of a constructor argument |
 ///
 #[proc_macro_derive(new, attributes(new))]
 pub fn derive_fancy_constructor(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
