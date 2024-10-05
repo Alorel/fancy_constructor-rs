@@ -2,9 +2,8 @@
 
 Derive a highly configurable constructor for your struct
 
-[![MASTER CI status](https://github.com/Alorel/fancy_constructor-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/Alorel/fancy_constructor-rs/actions/workflows/ci.yml?query=branch%3Amaster)
+[![MASTER CI status](https://github.com/Alorel/fancy_constructor-rs/actions/workflows/test.yml/badge.svg)](https://github.com/Alorel/fancy_constructor-rs/actions/workflows/test.yml?query=branch%3Amaster)
 [![crates.io badge](https://img.shields.io/crates/v/fancy_constructor)](https://crates.io/crates/fancy_constructor)
-[![docs.rs badge](https://img.shields.io/docsrs/fancy_constructor?label=docs.rs)](https://docs.rs/fancy_constructor)
 [![dependencies badge](https://img.shields.io/librariesio/release/cargo/fancy_constructor)](https://libraries.io/cargo/fancy_constructor)
 [![Coverage Status](https://coveralls.io/repos/github/Alorel/fancy_constructor-rs/badge.png)](https://coveralls.io/github/Alorel/fancy_constructor-rs)
 
