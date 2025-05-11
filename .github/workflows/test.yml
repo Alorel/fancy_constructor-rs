@@ -39,6 +39,8 @@ jobs:
 
       - name: cargo-rdme
         uses: alorel-actions/cargo/rdme@v2
+        with:
+          intralinks-strip-links: true
 
   nightly-test:
     name: Rust nightly

@@ -176,6 +176,43 @@ impl MyEnum {
 
 </details>
 
+<details><summary>Deriving the Default trait</summary>
+
+The `Default` trait can be derived if the constructor ends up with no arguments:
+
+```rust
+#[derive(new, PartialEq, Eq, Debug)]
+#[new(default, name(construct))]
+struct Foo {
+  #[new(val(u8::MAX))]
+  bar: u8,
+}
+
+assert_eq!(Foo::construct(), Foo::default());
+```
+
+Outputs:
+
+```rust
+impl Default for Foo {
+  fn default() -> Self {
+    Foo::construct()
+  }
+}
+````
+
+Attempting to use the option when the constructor has arguments will result in a compile error:
+
+```rust
+#[derive(new)]
+#[new(default)]
+struct Foo {
+  bar: u8,
+}
+```
+
+</details>
+
 <details><summary>Invalid inputs</summary>
 
 ```rust

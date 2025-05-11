@@ -5,8 +5,9 @@ use syn::punctuated::Punctuated;
 use syn::{Expr, LitStr, Token, TypeParam, Visibility};
 
 #[derive(AttributeOptions, Default)]
-pub(crate) struct ContainerOptions {
+pub struct ContainerOptions {
     pub const_fn: bool,
+    pub default: bool,
     pub vis: Option<Visibility>,
     pub name: Option<Ident>,
     pub comment: Option<LitStr>,
@@ -15,7 +16,7 @@ pub(crate) struct ContainerOptions {
 }
 
 #[derive(AttributeOptions)]
-pub(crate) struct FieldOptions {
+pub struct FieldOptions {
     pub default: bool,
     pub clone: bool,
     pub into: bool,
@@ -23,4 +24,16 @@ pub(crate) struct FieldOptions {
 
     #[attr_opts(rename = "val")]
     pub value: Option<Expr>,
+}
+
+impl FieldOptions {
+    #[inline]
+    pub fn uses_reference(&self) -> bool {
+        self.clone
+    }
+
+    #[inline]
+    pub fn should_skip_args(&self) -> bool {
+        self.default || self.value.is_some()
+    }
 }

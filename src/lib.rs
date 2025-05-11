@@ -188,6 +188,46 @@
 //!
 //! </details>
 //!
+//! <details><summary>Deriving the Default trait</summary>
+//!
+//! The [`Default`](::core::default::Default) trait can be derived if the constructor ends up with no arguments:
+//!
+//! ```
+//! # use fancy_constructor::new;
+//! #[derive(new, PartialEq, Eq, Debug)]
+//! #[new(default, name(construct))]
+//! struct Foo {
+//!   #[new(val(u8::MAX))]
+//!   bar: u8,
+//! }
+//!
+//! assert_eq!(Foo::construct(), Foo::default());
+//! ```
+//!
+//! Outputs:
+//!
+#![cfg_attr(doctest, doc = " ````no_test")]
+//! ```
+//! impl Default for Foo {
+//!   fn default() -> Self {
+//!     Foo::construct()
+//!   }
+//! }
+//! ````
+//!
+//! Attempting to use the option when the constructor has arguments will result in a compile error:
+//!
+//! ```compile_fail
+//! # use fancy_constructor::new;
+//! #[derive(new)]
+//! #[new(default)]
+//! struct Foo {
+//!   bar: u8,
+//! }
+//! ```
+//!
+//! </details>
+//!
 //! <details><summary>Invalid inputs</summary>
 //!
 //! ```compile_fail
@@ -227,6 +267,10 @@ mod types;
 
 extern crate proc_macro;
 
+use crate::types::FieldsSource;
+use proc_macro2::Ident;
+use syn::{Attribute, Type};
+
 const ATTR_NAME: &str = "new";
 
 /// See [crate-level docs](crate) for a usage and output example.
@@ -236,6 +280,7 @@ const ATTR_NAME: &str = "new";
 /// | Opt | Default | Description |
 /// | --- | --- | --- |
 /// | `new(const_fn)` | `false` | Whether to make the constructor a `const fn` |
+/// | `default` | `false` | Generate a [`Default`](::core::default::Default) implementation if the constructor ends up with no arguments. |
 /// | `new(vis(visibility))` | `pub` | The visibility of the constructor |
 /// | `new(name(ident))` | `new` | Constructor fn name |
 /// | `new(comment(literal))` | | A doc comment to add to the constructor |
@@ -246,9 +291,9 @@ const ATTR_NAME: &str = "new";
 ///
 /// | Opt | Description |
 /// | --- | --- |
-/// | `new(default)` | Omit the field from the constructor and use [`Default::default`] |
+/// | `new(default)` | Omit the field from the constructor and use [`Default`](::core::default::Default) |
 /// | `new(clone)` | Make the argument pass-by-reference and clone it |
-/// | `new(into)` | Make the argument [`Into<T>`](Into) |
+/// | `new(into)` | Make the argument [`Into<T>`](::core::convert::Into) |
 /// | `new(name(ident))` | Rename the function argument - useful for newtype structs |
 /// | `new(val(expr))` | Initialise the value with the following expression instead of a constructor argument |
 ///
@@ -259,29 +304,11 @@ pub fn derive_fancy_constructor(input: proc_macro::TokenStream) -> proc_macro::T
         .into()
 }
 
-enum Fields {
-    Unit,
-    Named(Vec<Field>),
-    Unnamed(Vec<Field>),
-}
-
-enum FieldsSource {
-    Struct(Fields),
-    Enum {
-        variant: proc_macro2::Ident,
-        fields: Fields,
-    },
-}
+type FmtTuple = (Vec<Attribute>, Result<Ident, Ident>, Type);
 
 struct FancyConstructor {
-    struct_name: proc_macro2::Ident,
+    struct_name: Ident,
     generics: syn::Generics,
     fields: FieldsSource,
     opts: options::ContainerOptions,
-}
-
-struct Field {
-    name: proc_macro2::Ident,
-    opts: options::FieldOptions,
-    ty: syn::Type,
 }
