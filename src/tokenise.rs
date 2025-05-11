@@ -1,13 +1,16 @@
-use macroific::elements::GenericImpl;
+use macroific::elements::{GenericImpl, ModulePrefix};
 use macroific::prelude::*;
 use proc_macro2::{Delimiter, Group, Ident, Punct, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::punctuated::Punctuated;
-use syn::Token;
+use syn::{Generics, Token};
 
-use crate::options::{ContainerOptions, FieldOptions};
-use crate::types::MiniField;
-use crate::{FancyConstructor, Field, Fields, FieldsSource};
+use crate::options::ContainerOptions;
+use crate::types::{FieldsSource, MiniField};
+use crate::FancyConstructor;
+
+const TRAIT_DEFAULT: ModulePrefix<3> = ModulePrefix::new(["core", "default", "Default"]);
+const NAME_DEFAULT: &str = "new";
 
 impl FancyConstructor {
     #[inline]
@@ -19,13 +22,45 @@ impl FancyConstructor {
             opts,
         } = self;
 
-        let header = GenericImpl::new(generics).with_target(struct_name);
+        let header = GenericImpl::new(&generics).with_target(&struct_name);
+        let default = make_default(&generics, &struct_name, &opts);
         let body = make_container_body(opts, fields);
+
         quote! {
             #[automatically_derived]
             #[allow(clippy::all)]
             #header {
                 #body
+            }
+
+            #default
+        }
+    }
+}
+
+#[inline]
+fn make_default(generics: &Generics, struct_name: &Ident, opts: &ContainerOptions) -> TokenStream {
+    if !opts.default {
+        return TokenStream::new();
+    }
+
+    let header = GenericImpl::new(&generics)
+        .with_trait(TRAIT_DEFAULT)
+        .with_target(&struct_name);
+
+    let new_name = if let Some(name) = &opts.name {
+        name.clone()
+    } else {
+        Ident::create(NAME_DEFAULT)
+    };
+
+    quote! {
+        #[automatically_derived]
+        #[allow(clippy::all)]
+        #header {
+            #[inline]
+            fn default() -> Self {
+                #struct_name::#new_name()
             }
         }
     }
@@ -35,6 +70,7 @@ impl FancyConstructor {
 fn make_container_body(opts: ContainerOptions, fields: FieldsSource) -> TokenStream {
     let ContainerOptions {
         const_fn,
+        default: _,
         vis,
         name,
         comment,
@@ -62,7 +98,7 @@ fn make_container_body(opts: ContainerOptions, fields: FieldsSource) -> TokenStr
     tokens.append(if let Some(name) = name {
         name
     } else {
-        Ident::create("new")
+        Ident::create(NAME_DEFAULT)
     });
 
     tokens.append(Group::new(Delimiter::Parenthesis, make_args(&fields, args)));
@@ -114,7 +150,7 @@ fn make_fn_body(fields: FieldsSource) -> TokenStream {
             }
 
             if field.opts.default {
-                tokens.extend(quote!(::core::default::Default::default()));
+                tokens.extend(quote!(#TRAIT_DEFAULT::default()));
             } else if let Some(ref value) = field.opts.value {
                 value.to_tokens(&mut tokens);
             } else {
@@ -143,7 +179,7 @@ fn make_fn_body(fields: FieldsSource) -> TokenStream {
 
 fn make_args(fields: &FieldsSource, args: Punctuated<MiniField, impl ToTokens>) -> TokenStream {
     let mut tokens = TokenStream::new();
-    let Some((_, fields)) = fields.fields().to_vec() else {
+    let Some((_, fields)) = fields.fields().to_slice() else {
         return tokens;
     };
 
@@ -174,52 +210,4 @@ fn make_args(fields: &FieldsSource, args: Punctuated<MiniField, impl ToTokens>) 
     tokens.append_separated(iter_args.chain(iter_fields), <Token![,]>::default());
 
     tokens
-}
-
-impl FieldOptions {
-    #[inline]
-    pub fn uses_reference(&self) -> bool {
-        self.clone
-    }
-
-    #[inline]
-    fn should_skip_args(&self) -> bool {
-        self.default || self.value.is_some()
-    }
-}
-
-impl FieldsSource {
-    fn fields(&self) -> &Fields {
-        match *self {
-            FieldsSource::Struct(ref fields) | FieldsSource::Enum { ref fields, .. } => fields,
-        }
-    }
-}
-
-impl Fields {
-    fn to_vec(&self) -> Option<(bool, &[Field])> {
-        match *self {
-            Fields::Unit => None,
-            Fields::Named(ref fields) => Some((true, fields)),
-            Fields::Unnamed(ref fields) => Some((false, fields)),
-        }
-    }
-
-    fn into_vec(self) -> Option<(bool, Vec<Field>)> {
-        match self {
-            Fields::Unit => None,
-            Fields::Named(fields) => Some((true, fields)),
-            Fields::Unnamed(fields) => Some((false, fields)),
-        }
-    }
-}
-
-impl Field {
-    pub fn resolve_ident(&self) -> &Ident {
-        if let Some(ref name) = self.opts.name {
-            name
-        } else {
-            &self.name
-        }
-    }
 }

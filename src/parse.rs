@@ -1,13 +1,13 @@
 use macroific::prelude::*;
-use proc_macro2::{Ident, Span};
-use quote::format_ident;
+use proc_macro2::Span;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{Attribute, Data, DeriveInput, Error, Fields as SFields, Type, Variant};
+use syn::{Data, DeriveInput, Error, Variant};
 
-use crate::options::{ContainerOptions, FieldOptions};
-use crate::{FancyConstructor, Field, Fields, FieldsSource, ATTR_NAME};
+use crate::options::ContainerOptions;
+use crate::types::FieldsSource;
+use crate::{FancyConstructor, ATTR_NAME};
 
 impl Parse for FancyConstructor {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -19,34 +19,53 @@ impl Parse for FancyConstructor {
             vis: _,
         } = input.parse()?;
 
-        Ok(Self {
-            fields: match data {
-                Data::Struct(s) => FieldsSource::Struct(s.fields.try_into()?),
-                Data::Enum(e) => {
-                    let variant = find_variant(&e.enum_token, e.variants)?;
+        let fields = match data {
+            Data::Struct(s) => FieldsSource::Struct(s.fields.try_into()?),
+            Data::Enum(e) => {
+                let variant = find_variant(&e.enum_token, e.variants)?;
 
-                    FieldsSource::Enum {
-                        fields: variant.fields.try_into()?,
-                        variant: variant.ident,
-                    }
+                FieldsSource::Enum {
+                    fields: variant.fields.try_into()?,
+                    variant: variant.ident,
                 }
-                Data::Union(u) => {
-                    return Err(Error::new_spanned(u.union_token, "Unions not supported"));
-                }
-            },
+            }
+            Data::Union(u) => {
+                return Err(Error::new_spanned(u.union_token, "Unions not supported"));
+            }
+        };
+
+        Ok(Self {
             opts: if attrs.is_empty() {
                 ContainerOptions::default()
             } else {
                 let span = create_span(&attrs);
-                ContainerOptions::from_iter_named(ATTR_NAME, span, attrs)?
+                let opts = ContainerOptions::from_iter_named(ATTR_NAME, span, attrs)?;
+
+                if opts.default {
+                    validate_opts(&opts, &fields, span)?;
+                }
+
+                opts
             },
+            fields,
             struct_name,
             generics,
         })
     }
 }
 
-fn create_span<'a, S>(it: impl IntoIterator<Item = &'a S>) -> Span
+fn validate_opts(opts: &ContainerOptions, fields: &FieldsSource, span: Span) -> Result<(), Error> {
+    if opts.args.is_empty() && fields.fields().is_argless() {
+        Ok(())
+    } else {
+        Err(Error::new(
+            span,
+            "The constructor cannot have any arguments if the `default` option is used",
+        ))
+    }
+}
+
+pub fn create_span<'a, S>(it: impl IntoIterator<Item = &'a S>) -> Span
 where
     S: Spanned + 'a,
 {
@@ -54,51 +73,6 @@ where
         .map(Spanned::span)
         .reduce(move |a, b| if let Some(span) = a.join(b) { span } else { a })
         .unwrap_or_else(Span::call_site)
-}
-
-fn collect_fields<F>(src_iter: impl Iterator<Item = FmtTuple>) -> syn::Result<F>
-where
-    F: FromIterator<Field>,
-{
-    src_iter
-        .map(move |(attrs, ident, ty)| {
-            Ok(Field {
-                name: match ident {
-                    Ok(ident) | Err(ident) => ident,
-                },
-                opts: {
-                    let span = create_span(&attrs);
-                    FieldOptions::from_iter_named(ATTR_NAME, span, attrs)
-                }?,
-                ty,
-            })
-        })
-        .collect()
-}
-
-type FmtTuple = (Vec<Attribute>, Result<Ident, Ident>, Type);
-
-#[inline]
-fn fmt_named(fields: impl IntoIterator<Item = syn::Field>) -> impl Iterator<Item = FmtTuple> {
-    fields.into_iter().map(
-        move |syn::Field {
-                  attrs, ident, ty, ..
-              }| {
-            (
-                attrs,
-                Ok(ident.expect("Failed to get ident off a named field")),
-                ty,
-            )
-        },
-    )
-}
-
-#[inline]
-fn fmt_unnamed(fields: impl IntoIterator<Item = syn::Field>) -> impl Iterator<Item = FmtTuple> {
-    fields
-        .into_iter()
-        .enumerate()
-        .map(move |(i, syn::Field { attrs, ty, .. })| (attrs, Err(format_ident!("f{}", i + 1)), ty))
 }
 
 fn find_variant<P>(span: &impl Spanned, variants: Punctuated<Variant, P>) -> syn::Result<Variant> {
@@ -126,17 +100,5 @@ fn find_variant<P>(span: &impl Spanned, variants: Punctuated<Variant, P>) -> syn
             span.span(),
             "Expected a variant marked with `#[new]`",
         ))
-    }
-}
-
-impl TryFrom<SFields> for Fields {
-    type Error = Error;
-
-    fn try_from(fields: SFields) -> Result<Self, Self::Error> {
-        Ok(match fields {
-            SFields::Unit => Fields::Unit,
-            SFields::Named(f) => Fields::Named(collect_fields(fmt_named(f.named))?),
-            SFields::Unnamed(f) => Fields::Unnamed(collect_fields(fmt_unnamed(f.unnamed))?),
-        })
     }
 }

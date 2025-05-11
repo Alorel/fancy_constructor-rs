@@ -16,7 +16,7 @@ include = ["src/", "Cargo.toml"]
 proc-macro = true
 
 [dependencies]
-macroific = {version = "2", features = ["attr_parse", "full"]}
+macroific = {version = "2", features = ["attr_parse", "full", "module-prefix", "generic-impl"]}
 quote = "1"
 proc-macro2 = "1"
 syn = "2"
