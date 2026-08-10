@@ -50,7 +50,7 @@ jobs:
       - name: Init toolchain
         uses: alorel-actions/cargo/init@v2
         with:
-          toolchain: nightly-2025-05-05
+          toolchain: nightly-2026-08-09
           cache-prefix: test
           local: true
           components: llvm-tools-preview
