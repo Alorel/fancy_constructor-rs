@@ -38,9 +38,7 @@ jobs:
         run: cargo doc --workspace --no-deps && rm -rf target/doc
 
       - name: cargo-rdme
-        uses: alorel-actions/cargo/rdme@v2
-        with:
-          intralinks-strip-links: true
+        uses: ./.github/actions/cargo-rdme
 
   nightly-test:
     name: Rust nightly

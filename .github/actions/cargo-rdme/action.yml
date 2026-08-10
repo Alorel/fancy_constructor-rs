@@ -1,0 +1,23 @@
+name: Generate changelog
+description: Generate the changelog
+outputs:
+  changelog:
+    description: Changelog value
+    value: ${{ steps.log.outputs.changelog }}
+runs:
+  using: composite
+  steps:
+
+    - name: Install cargo-rdme
+      uses: alorel-actions/cargo-global-dep@v1
+      with:
+        name: cargo-rdme
+        version: '^2'
+
+    - name: cargo-rdme toolchain install
+      shell: bash
+      run: cargo rdme install-rust-toolchain-for-intralinks
+
+    - name: cargo-rdme
+      shell: bash
+      run: cargo rdme --check --intralinks-all-features
