@@ -9,7 +9,7 @@ use crate::options::ContainerOptions;
 use crate::types::{FieldsSource, MiniField};
 use crate::FancyConstructor;
 
-const TRAIT_DEFAULT: ModulePrefix<3> = ModulePrefix::new(["core", "default", "Default"]);
+const TRAIT_DEFAULT: ModulePrefix<'static> = ModulePrefix::new(&["core", "default", "Default"]);
 const NAME_DEFAULT: &str = "new";
 
 impl FancyConstructor {
@@ -130,9 +130,8 @@ fn make_fn_body(fields: FieldsSource) -> TokenStream {
         }
     };
 
-    let (named, fields) = match fields {
-        None => return tokens,
-        Some(v) => v,
+    let Some((named, fields)) = fields else {
+        return tokens;
     };
 
     let delim = if named {
