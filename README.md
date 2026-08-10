@@ -178,7 +178,7 @@ impl MyEnum {
 
 <details><summary>Deriving the Default trait</summary>
 
-The `Default` trait can be derived if the constructor ends up with no arguments:
+The [`Default`](https://doc.rust-lang.org/stable/core/default/trait.Default.html) trait can be derived if the constructor ends up with no arguments:
 
 ```rust
 #[derive(new, PartialEq, Eq, Debug)]
